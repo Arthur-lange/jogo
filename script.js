@@ -1,101 +1,100 @@
-const canvas = document.getElementById('jogo2D')
-const ctx = canvas.getContext('2d')
-const gravidade = 0.5
+const canvas = document.getElementById('jogo2D');
+const ctx = canvas.getContext('2d');
+let gameOver = false;
+
 document.addEventListener('keypress', (e) => {
-    if(e.code == 'Space' && personagem.pulando==false){
-        personagem.velocidadey =  15
-        console.log("PULOU")
-        personagem.pulando = true
+    if (e.code === 'Space' && personagem.pulando === false) {
+        personagem.saltar();
     }
-})
+});
 
-const personagem = {
-    x: 100,
-    y: canvas.height - 50,
-    altura: 50,
-    largura: 50,
-    velocidadey: 0,
-    pulando: false
+document.addEventListener('click', (e) => {
+    if (gameOver === true) {
+        location.reload();
+    }
+});
+
+class Entidade {
+    #gravidade;
+    constructor(x, y, largura, altura) {
+        this.x = x;
+        this.y = y;
+        this.largura = largura;
+        this.altura = altura;
+        this.#gravidade = 0.5;
+    }
+
+    get gravidade() {
+        return this.#gravidade;
+    }
+
+    desenhar(ctx, cor) {
+        ctx.fillStyle = cor;
+        ctx.fillRect(this.x, this.y, this.largura, this.altura);
+    }
 }
 
-function desenharPersonagem() {
-    ctx.fillStyle = 'black'
-    ctx.fillRect(personagem.x, personagem.y, personagem.altura, personagem.largura)
-}
+class Personagem extends Entidade {
+    #pulando;
+    #velocidadey;
 
-function atualizarPersonagem() {
-    if(personagem.pulando == true){
-        personagem.velocidadey -= gravidade
-        personagem.y -= personagem.velocidadey
-        if(personagem.y >= canvas.height-50){
-            personagem.velocidadey = 0
-            personagem.pulando = false
-            personagem.y = canvas.height-50
+    constructor(x, y, largura, altura) {
+        super(x, y, largura, altura);
+        this.#pulando = false;
+        this.#velocidadey = 0;
+    }
+
+    saltar() {
+        this.#velocidadey = 15; 
+        this.#pulando = true;
+        console.log('saltou');
+    }
+
+    get pulando() {
+        return this.#pulando;
+    }
+
+    atualizarPersonagem() {
+        if (this.#pulando == true) {
+            this.#velocidadey -= this.gravidade; 
+            this.y -= this.#velocidadey; 
+
+            if (this.y >= canvas.height - 50) { 
+                this.#velocidadey = 0;
+                this.#pulando = false;
+                this.y = canvas.height - 50; 
+            }
         }
     }
 }
 
-const obstaculo = {
-    x: canvas.width - 50,
-    y: canvas.height - 100,
-    largura: 50,
-    altura: 100,
-    velocidadex: 7
-}
-
-function desenharObstaculo() {
-    ctx.fillStyle = 'green'
-    ctx.fillRect(obstaculo.x, obstaculo.y, obstaculo.largura, obstaculo.altura)
-}
-
-function atualizarObstaculo() {
-    obstaculo.x -= obstaculo.velocidadex
-    if(obstaculo.x <= 0 - obstaculo.largura){
-        obstaculo.x = canvas.width
-        obstaculo.velocidadex += 0.2
-        let nova_altura = (Math.random() * 50) + 100
-        obstaculo.altura = nova_altura
-        obstaculo.y = canvas.height - nova_altura
+class Obstaculo extends Entidade {
+    constructor(x, y, largura, altura) {
+        super(x, y, largura, altura);
     }
 }
 
-function verificarColisao() {
-    if (
-        personagem.x < obstaculo.x + obstaculo.largura &&
-        personagem.x + personagem.largura > obstaculo.x &&
-        personagem.y < obstaculo.y + obstaculo.altura &&
-        personagem.y + personagem.altura > obstaculo.y
-    ) {
-        return true;
-    }
-    return false;
-}
-
-function exibirGameOver() {
-    ctx.fillStyle = 'black'
-    ctx.font = '48px Arial'
-    ctx.fillText('GAME OVER', canvas.width / 2 - 120, canvas.height / 2)
-}
-
-let jogoAtivo = true;
+const personagem = new Personagem(100, canvas.height - 50, 50, 50);
 
 function loop() {
-    if (!jogoAtivo) {
+    if (gameOver) {
         exibirGameOver();
         return;
     }
-   
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    desenharPersonagem()
-    desenharObstaculo()
-    atualizarPersonagem()
-    atualizarObstaculo()
-   
-    if (verificarColisao()) {
-        jogoAtivo = false;
-    }
 
-    requestAnimationFrame(loop)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    personagem.atualizarPersonagem(); 
+    personagem.desenhar(ctx, 'blue'); 
+
+
+    requestAnimationFrame(loop); 
 }
 
-loop()
+loop();
+
+function exibirGameOver() {
+    ctx.fillStyle = 'black';
+    ctx.font = '30px Arial';
+    ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+}
