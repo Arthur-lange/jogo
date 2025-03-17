@@ -1,60 +1,158 @@
-const canvas = document.getElementById('jogo2D')
-const ctx = canvas.getContext('2d')
-let gameOver
+const canvas = document.getElementById('jogo2D');
+const ctx = canvas.getContext('2d');
+let gameOver = false;
+let pontuacao = 0;
+const gravidade = 0.5;
+
+
+const fundo = new Image();
+fundo.src = 'fundo.jpg';
 
 document.addEventListener('keypress', (e) => {
-    if(e.code == 'Space' && personagem.pulando == false && !gameOver){
-        personagem.velocidadey = 15
-        console.log("PULOU")
-        personagem.pulando = true
+    if (e.code === 'Space' && personagem.pulando === false) {
+        personagem.saltar();
     }
-    if(e.code == 'Enter' && gameOver){
-        reiniciarJogo()
-    }
-})
+});
 
-class entidade{
-    #gravidade
-    constructor(x,y,largura,altura){
+document.addEventListener('click', () => {
+    if (gameOver === true) {
+        location.reload();
+    }
+});
+
+class Entidade {
+    constructor(x, y, largura, altura) {
         this.x = x;
         this.y = y;
         this.largura = largura;
         this.altura = altura;
-        this.#gravidade = 0.5
-    }
-    get gravidade(){
-        return this.#gravidade 
-    }
-}
-class personagem extends entidade{
-    constructor(x,y,largura,altura){
-        super(x,y,largura,altura)
-    }
-}
-class obstaculo extends entidade{
-    constructor(x,y,largura,altura){
-        super(x,y,largura,altura)
     }
 }
 
-const x = new entidade(10,20,30,50)
-console.log(x.gravidade)
-
-function loop(){
-    if (gameOver) {
-        desenharGameOver()
-        return
+class Personagem extends Entidade {
+    constructor(x, y, largura, altura) {
+        super(x, y, largura, altura);
+        this.pulando = false;
+        this.velocidadey = 0;
+        this.imagem = new Image();
+        this.imagem.src = 'fundo_carros.png';
     }
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    
-    desenharPersonagem()
-    desenharObstaculo()
-    atualizarPersonagem()
-    atualizarObstaculo()
-    detectarColisao()
-    
-    requestAnimationFrame(loop)
+
+    saltar() {
+        if (!this.pulando) {
+            this.velocidadey = 15;
+            this.pulando = true;
+        }
+    }
+
+    atualizar() {
+        if (this.pulando) {
+            this.velocidadey -= gravidade;
+            this.y -= this.velocidadey;
+
+            if (this.y >= canvas.height - this.altura) {
+                this.velocidadey = 0;
+                this.pulando = false;
+                this.y = canvas.height - this.altura;
+            }
+        }
+    }
+
+    verificarColisao(obstaculos) {
+        for (let obstaculo of obstaculos) {
+            if (
+                this.x < obstaculo.x + obstaculo.largura &&
+                this.x + this.largura > obstaculo.x &&
+                this.y < obstaculo.y + obstaculo.altura &&
+                this.y + this.altura > obstaculo.y
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    desenhar(ctx) {
+        ctx.drawImage(this.imagem, this.x, this.y, this.largura, this.altura);
+    }
 }
 
-loop()
+class Obstaculo extends Entidade {
+    constructor(x, y, largura, altura, velocidadex) {
+        super(x, y, largura, altura);
+        this.velocidadex = velocidadex || 4;
+        this.passou = false;
+        this.imagem = new Image();
+        this.imagem.src = 'obstaculo.png'; 
+    }
+
+    mover() {
+        this.x -= this.velocidadex;
+
+        if (this.x + this.largura < 0) {
+            this.x = canvas.width;
+            this.velocidadex += 0.2;
+            let novaAltura = (Math.random() * 50) + 100;
+            this.altura = novaAltura;
+            this.y = canvas.height - novaAltura;
+            this.passou = false;
+        }
+
+        if (!this.passou && this.x + this.largura < personagem.x) {
+            pontuacao += 1;
+            this.passou = true;
+        }
+    }
+
+    desenhar(ctx) {
+        ctx.drawImage(this.imagem, this.x, this.y, this.largura, this.altura);
+    }
+}
+
+const personagem = new Personagem(100, canvas.height - 50, 50, 50);
+const obstaculos = [
+    new Obstaculo(500, canvas.height - 50, 50, 50),
+    new Obstaculo(800, canvas.height - 100, 50, 100)
+];
+
+function exibirGameOver() {
+    ctx.fillStyle = 'white'; 
+    ctx.font = '30px Arial';
+    ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+    ctx.fillText(`Pontuação Final: ${pontuacao}`, canvas.width / 2 - 120, canvas.height / 2 + 40);
+}
+
+function exibirPontuacao() {
+    ctx.fillStyle = 'white'; 
+    ctx.font = '20px Arial';
+    ctx.fillText(`Pontuação: ${pontuacao}`, 20, 30);
+}
+
+let jogoAtivo = true;
+
+function loop() {
+    if (!jogoAtivo) {
+        exibirGameOver();
+        return;
+    }
+
+    ctx.drawImage(fundo, 0, 0, canvas.width, canvas.height);
+
+    personagem.atualizar();
+    personagem.desenhar(ctx);
+
+    obstaculos.forEach((obstaculo) => {
+        obstaculo.mover();
+        obstaculo.desenhar(ctx);
+    });
+
+    exibirPontuacao();
+
+    if (personagem.verificarColisao(obstaculos)) {
+        jogoAtivo = false;
+    }
+
+    requestAnimationFrame(loop);
+}
+
+loop();
